@@ -1,37 +1,40 @@
 <?php
 //Версия скрипта
-$scriptVersion = '0.3';
+$scriptVersion = '0.4';
 
 //Название скрипта
 $scriptName = 'WARODAI_EBCONV';
 
-//Редакция (публичная или X)
-$edition = (isset($argv[1]) && $argv[1] == "XWARODAI") ? "XWARODAI" : "WARODAI";
+//Корпус
+if(!isset($argv[1])){
+    throw new Exception('Corpus is not defined.');
+}
+$edition = $argv[1];
 
 //Входные файлы
-$inputDir = 'RAW_SOURCE';
+$inputDir = 'SRC/'.$edition;
 //Файл с заранее сгенерированными битмапами гайдзи
 $gaijiPregenFile = "{$inputDir}/Gaiji_pregen.xml";
 //Файл-шаблон словаря (содержит все, кроме корпусов всех видов и копирайта)
-$dictTmplFile = "{$inputDir}/DAI_dict_u.tmpl.html";
+$dictTmplFile = "{$inputDir}/dict.tmpl.html";
 //Файл копирайта
-$copyrightFile = "{$inputDir}/DAI_copyright.html";
+$copyrightFile = "{$inputDir}/copyright.html";
 //Файл словаря в txt　формате (содержит все корпуса)
-$warodaiTXTFileName = ($edition == 'XWARODAI') ? 'xwarodai.txt' : 'ewarodai.txt';
+$warodaiTXTFileName = strtolower($edition).'.txt';
 $warodaiTXTSrcFile = "{$inputDir}/{$warodaiTXTFileName}";
 
 //Выходные файлы
-$EBStudioSourceDir = "{$edition}_SOURCE";
-$EBWinDir = "{$edition}";
+$EBStudioSourceDir = "HTML/{$edition}";
+$EBWinDir = "EPWING/{$edition}";
 //Содержит весь исходник в формате HTML
-$DAIDictHTMLFile = "{$EBStudioSourceDir}/DAI_dict.html";
+$DAIDictHTMLFile = "{$EBStudioSourceDir}/dict.html";
 //Выходной файл копирайта
-$copyrightHTMLFile = "{$EBStudioSourceDir}/DAI_copyright.html";
+$copyrightHTMLFile = "{$EBStudioSourceDir}/copyright.html";
 //Файл GaijiMap.xml - соответствие юникод-кодов ebcode-кодам
 $GaijiMapFile = "{$EBStudioSourceDir}/GaijiMap.xml";
 //Файл Gaiji.xml - содержит набор битмапов гайдзи с правильным юникод- и ebcode-кодами
 $GaijiFile = "{$EBStudioSourceDir}/Gaiji.xml";
-//Файл WARODAI.map (XWARODAI.map) - файл обратного соответствия ebcode-кодов юникод-кодам
+//Файл .map - файл обратного соответствия ebcode-кодов юникод-кодам
 //Используется EBWin для правильной подстановки символов при копирование
 //Не является исходником для EbStudio, должен кластся туда же, куда EbStudio складывает
 //словарь в формате EPWING и должен называться так же, как папка, в которой он лежит
@@ -522,8 +525,7 @@ function articleToHTML($article,$edition){
 
     //Формируем HTML c x-комментариями
     $xcommentsHTML = "";
-    if($edition=='XWARODAI' && sizeof($article['xcomments']) > 0){
-        //Закрытые X-комментарии добавляем, только если издание - XWARODAI
+    if(sizeof($article['xcomments']) > 0){
         $xcommentsHTML = implode("<br>\n",$article['xcomments']);
 
         if(!empty($xcommentsHTML)){
