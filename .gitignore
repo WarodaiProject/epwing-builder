@@ -12,4 +12,4 @@ HTML/BJRD/*.xml
 HTML/XBJRD/*.xml
 BJRD_encoding_report.html
 XBJRD_encoding_report.html
-EBStudio.log
+EBStudio/EBStudio.log
