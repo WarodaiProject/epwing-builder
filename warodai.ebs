@@ -62,5 +62,5 @@ pdicYorei=0
 withHeader=0
 optMono=0
 Size=10000;10000;4000;2000000;4000;50000;50000;500;500;10000;2000
-Book=˜a˜I‘å;WARODAI;‘ŒêŽ«“T;_;_;_;_;_;_;_;_;_;_;
+Book=WARODAI;WARODAI;‘ŒêŽ«“T;_;_;_;_;_;_;_;_;_;_;
 Source=$(BASE)\dict.html;_;_;HTML;
