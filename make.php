@@ -153,7 +153,7 @@ try {
     logMsg("\t$WARODAIMapFile");
 
     //Делаем отчет о конвертации
-    logMsg("Generating gaiji encoding report - {$edition}_encoding_report.html");
+    logMsg("Generating gaiji encoding report - {$EBStudioSourceDir}/encoding_report.html");
     generateEncodingReport(
         $convertedDict['unicodeToEbcodeIdx'],
         $convertedDict['gaijiIdx'],
