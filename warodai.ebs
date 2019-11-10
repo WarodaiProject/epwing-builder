@@ -1,5 +1,5 @@
-InPath=HTML\WARODAI
-OutPath=EPWING\WARODAI
+InPath=HTML\WARODAI\
+OutPath=EPWING\WARODAI\
 IndexFile=
 Copyright=$(BASE)\copyright.html
 GaijiFile=$(BASE)\Gaiji.xml

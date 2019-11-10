@@ -1,6 +1,6 @@
 <?php
 //Версия скрипта
-$scriptVersion = '0.4';
+$scriptVersion = '1.0';
 
 //Название скрипта
 $scriptName = 'WARODAI_EBCONV';
@@ -157,9 +157,8 @@ try {
     generateEncodingReport(
         $convertedDict['unicodeToEbcodeIdx'],
         $convertedDict['gaijiIdx'],
-        $convertedDict['prvUCodetoExtB'],
         $convertedDict['generatedGaijiIdx'],
-        "{$edition}_encoding_report.html"
+        "{$EBStudioSourceDir}/encoding_report.html"
     );
     logMsg("Done!");
 }
@@ -621,11 +620,6 @@ function encodeGaiji($inputs, $gaijiIdx){
     //с учетом субприватной зоны
     $prvUCodeIncrementor = $subPrvZone['end']+1;
 
-    //индекс Ext->PUA: соответствие кодов из CJK-extB кодам из приватной зоны (Unicode PUA)
-    $extToPrvUCodeIdx = [];
-    //обратный индекс PUA->Ext. Используется при генерации WARODAI.map
-    $prvUCodetoExt = [];
-
     //Перечень кодов, для которых битмапы были сгенерированы
     $generatedGaijiIdx = [];
 
@@ -716,7 +710,7 @@ function encodeGaiji($inputs, $gaijiIdx){
 
             if($currentCharOrd >= $subPrvZone['start'] && $currentCharOrd <= $subPrvZone['end']){
                 //Если это субприватный код, нельзя конвертировать
-                //iconv под WIndows почему-то успешно его конвертирует
+                //iconv под Windows почему-то успешно его конвертирует
                 $currentShiftJSChar = FALSE;
             }
             elseif(isset($JISx208Symbols[$currentChar])){
@@ -736,36 +730,7 @@ function encodeGaiji($inputs, $gaijiIdx){
             if($currentShiftJSChar === FALSE){
                 //Символ не входит в набор JISx208 - он гайдзи (外字)
 
-                //Разбираемся, не следует ли выполнить подстановку реального
-                //кода юникода на код из PUA
-                if($currentCharOrd >= 0xffff){
-                    //Символ содержит больше 5 шестнадцатиричных цифр.
-                    //Скорее всего он входит в CJK Unified Ideographs Extension B (U+20000-U+2A6DF) или
-                    //CJK Unified Ideographs Extension C (U+2A700 to U+2B73F), но может быть и из
-                    //какого-нибудь другого пространства.
-                    //EbStudio, по признанию Исиды, не поддерживает такие коды и поэтому
-                    //их приходится менять на коды из приватной зоны Unicode (PUA) (U+E000–U+F8FF).
-                    //現在のEBStudioでは、EXt-BのUnicode表記に対応していません。
-                    //0xE000～の外字領域を使うしかありません。
-                    //Таким образом мы делаем вид, что у них сами юникодные коды другие. И эти
-                    //другие коды мы используем в файлах GaijiMap.xml и Gaiji.xml.
-                    //А вот в WARODAI.map используем правильные (исходные) коды Unicode.
-
-                    if(!isset($extToPrvUCodeIdx[$currentCharHex])){
-                        //Если в индексе Ext -> PUA нет еще этого символа
-                        //добавляем его
-                        $extToPrvUCodeIdx[$currentCharHex] = sprintf('%04X',$prvUCodeIncrementor);
-                        //и в обратный индекс тоже
-                        $prvUCodetoExt[sprintf('%04X',$prvUCodeIncrementor)] = $currentCharHex;
-                        $prvUCodeIncrementor++;
-                    }
-
-                    //меняем код символа, который будет вставлен в выходную строку,
-                    //теперь он будет из PUA
-                    $outputCharHex = $extToPrvUCodeIdx[$currentCharHex];
-                }
-
-                //Теперь нужно добавить код в индекс Unicode->Ebcode, если его там нет
+                //Нужно добавить код в индекс Unicode->Ebcode, если его там нет
                 if(!isset($unicodeToEbcodeIdx['hankaku'][$outputCharHex]) &&
                     !isset($unicodeToEbcodeIdx['zenkaku'][$outputCharHex])){
                     //Символа нет в индексе - добавляем
@@ -842,10 +807,9 @@ function encodeGaiji($inputs, $gaijiIdx){
 
             $gaijiMap .= "\t<gaijiMap unicode=\"#x$unicodeCode\" ebcode=\"$ebCode\"/>\n";
 
-            $realUnicodeCode = (isset($prvUCodetoExt[$unicodeCode]) ? $prvUCodetoExt[$unicodeCode] : $unicodeCode);
-            $gaiji .= "<fontData ebcode=\"$ebCode\" unicode=\"$unicodeCode\">".$gaijiIdx[$kaku][$realUnicodeCode]."</fontData>\n";
+            $gaiji .= "<fontData ebcode=\"$ebCode\" unicode=\"$unicodeCode\">".$gaijiIdx[$kaku][$unicodeCode]."</fontData>\n";
 
-            $mapFile .= $kaku{0}.$ebCode."\tu$realUnicodeCode\t\t#	".unichr(hexdec($realUnicodeCode))."\n";
+            $mapFile .= $kaku{0}.$ebCode."\tu$unicodeCode\t\t#	".unichr(hexdec($unicodeCode))."\n";
         }
         $gaiji .= "</fontSet>\n";
     }
@@ -860,13 +824,12 @@ function encodeGaiji($inputs, $gaijiIdx){
         'mapFile'=>$mapFile,
         'unicodeToEbcodeIdx' => $unicodeToEbcodeIdx,
         'gaijiIdx' => $gaijiIdx,
-        'prvUCodetoExtB' => $prvUCodetoExt,
         'generatedGaijiIdx' => $generatedGaijiIdx
     ];
 }
 
 function getCharBitmap($charHex){
-$fontDumpPath = 'EBStudio\FontDumpW.exe';
+$fontDumpPath = 'fontdump\FontDumpW.exe';
 //Этот битмап мы будем возвращать, если FontDump не сработал
 $missingBitmap = <<< EOD
 
@@ -1019,7 +982,7 @@ function getCorpusCode($corpusName){
     return (isset($corpusCodesIdx[trim($corpusName)]) ? $corpusCodesIdx[trim($corpusName)] : null);
 }
 
-function generateEncodingReport($unicodeToEbcodeIdx, $gaijiIdx, $prvUCodetoExtB, $generatedGaijiIdx, $outputFile="encoding_report.html"){
+function generateEncodingReport($unicodeToEbcodeIdx, $gaijiIdx, $generatedGaijiIdx, $outputFile="encoding_report.html"){
     $pageHTML = <<<EOD
 <!DOCTYPE html>
     <html>
@@ -1076,7 +1039,6 @@ function generateEncodingReport($unicodeToEbcodeIdx, $gaijiIdx, $prvUCodetoExtB,
                         <th>№</th>
                         <th>Ebcode</th>
                         <th>Unicode</th>
-                        <th>EB-Unicode</th>
                         <th>Big bitmap</th>
                         <th>16x16 Bitmap</th>
                         <th>Char</th>
@@ -1094,19 +1056,17 @@ EOD;
    $charCounter = 1;
    foreach(['hankaku','zenkaku'] as $kaku){
         foreach($unicodeToEbcodeIdx[$kaku] as $unicodeCode=>$ebCode){
-            $realUnicodeCode = (isset($prvUCodetoExtB[$unicodeCode]) ? $prvUCodetoExtB[$unicodeCode] : $unicodeCode);
-            $bitmapTable = gaijiBitmapToTable($gaijiIdx[$kaku][$realUnicodeCode],"bitmap");
-            $bigBitmapTable = gaijiBitmapToTable($gaijiIdx[$kaku][$realUnicodeCode],"big-bitmap");
-            $char = unichr(hexdec($realUnicodeCode));
+            $bitmapTable = gaijiBitmapToTable($gaijiIdx[$kaku][$unicodeCode],"bitmap");
+            $bigBitmapTable = gaijiBitmapToTable($gaijiIdx[$kaku][$unicodeCode],"big-bitmap");
+            $char = unichr(hexdec($unicodeCode));
             $charCounterF = sprintf('%04u',$charCounter);
 
-            $trClass = (isset($generatedGaijiIdx[$realUnicodeCode])) ? 'g' : '';
+            $trClass = (isset($generatedGaijiIdx[$unicodeCode])) ? 'g' : '';
 
             $charTR = <<<EOD
                     <tr class="{$trClass}">
                         <td>{$charCounterF}</td>
                         <td>{$kaku{0}}{$ebCode}</td>
-                        <td>U+{$realUnicodeCode}</td>
                         <td>&amp;#x{$unicodeCode}</td>
                         <td>{$bigBitmapTable}</td>
                         <td>{$bitmapTable}</td>
