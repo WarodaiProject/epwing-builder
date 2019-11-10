@@ -1,5 +1,5 @@
-InPath=HTML\XBJRD
-OutPath=EPWING\XBJRD
+InPath=HTML\XBJRD\
+OutPath=EPWING\XBJRD\
 IndexFile=
 Copyright=$(BASE)\copyright.html
 GaijiFile=$(BASE)\Gaiji.xml
